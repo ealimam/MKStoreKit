@@ -276,7 +276,7 @@ static MKStoreManager* _sharedStoreManager;
 - (BOOL) removeAllKeychainData {
   
   NSMutableArray *productsArray = [MKStoreManager allProducts];
-  int itemCount = productsArray.count;
+  NSInteger itemCount = productsArray.count;
   NSError *error;
   
   //loop through all the saved keychain data and remove it
@@ -466,7 +466,7 @@ static MKStoreManager* _sharedStoreManager;
   if ([SKPaymentQueue canMakePayments])
 	{
     NSArray *allIds = [self.purchasableObjects valueForKey:@"productIdentifier"];
-    int index = [allIds indexOfObject:productId];
+    NSInteger index = [allIds indexOfObject:productId];
     
     if(index == NSNotFound) return;
     
@@ -588,8 +588,14 @@ static MKStoreManager* _sharedStoreManager;
 #ifndef NDEBUG
         NSLog(@"Download finished: %@", [download description]);
 #endif
+            NSData* receiptData = nil;
+
+                NSURL* receiptUrl = [[NSBundle mainBundle] appStoreReceiptURL];
+                if ([[NSFileManager defaultManager] fileExistsAtPath:[receiptUrl path]]) {
+                    receiptData = [NSData dataWithContentsOfURL:receiptUrl];
+                }
         [self provideContent:download.transaction.payment.productIdentifier
-                  forReceipt:download.transaction.transactionReceipt
+                  forReceipt:receiptData
                hostedContent:[NSArray arrayWithObject:download]];
         
         [[SKPaymentQueue defaultQueue] finishTransaction:download.transaction];
@@ -779,9 +785,15 @@ static MKStoreManager* _sharedStoreManager;
     return;
   }
 #endif
-  
+    
+    NSData* receiptData = nil;
+    NSURL* receiptUrl = [[NSBundle mainBundle] appStoreReceiptURL];
+    if ([[NSFileManager defaultManager] fileExistsAtPath:[receiptUrl path]]) {
+        receiptData = [NSData dataWithContentsOfURL:receiptUrl];
+    }
+    
   [self provideContent:transaction.payment.productIdentifier
-            forReceipt:transaction.transactionReceipt
+            forReceipt:receiptData
          hostedContent:downloads];
 #elif TARGET_OS_MAC
   [self provideContent:transaction.payment.productIdentifier
@@ -812,8 +824,14 @@ static MKStoreManager* _sharedStoreManager;
   }
 #endif
   
-  [self provideContent: transaction.originalTransaction.payment.productIdentifier
-            forReceipt:transaction.transactionReceipt
+    NSData* receiptData = nil;
+    NSURL* receiptUrl = [[NSBundle mainBundle] appStoreReceiptURL];
+    if ([[NSFileManager defaultManager] fileExistsAtPath:[receiptUrl path]]) {
+        receiptData = [NSData dataWithContentsOfURL:receiptUrl];
+    }
+    
+  [self provideContent:transaction.originalTransaction.payment.productIdentifier
+            forReceipt:receiptData
          hostedContent:downloads];
 #elif TARGET_OS_MAC
   [self provideContent: transaction.originalTransaction.payment.productIdentifier
