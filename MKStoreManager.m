@@ -70,75 +70,80 @@
 
 static MKStoreManager* _sharedStoreManager;
 
-+(void) updateFromiCloud:(NSNotification*) notificationObject {
-  
-  NSLog(@"Updating from iCloud");
-  
-  NSUbiquitousKeyValueStore *iCloudStore = [NSUbiquitousKeyValueStore defaultStore];
-  NSDictionary *dict = [iCloudStore dictionaryRepresentation];
-  NSMutableArray *products = [self allProducts];
-  
-  [products enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
-    
-    id valueFromiCloud = [dict objectForKey:obj];
-    
-    if(valueFromiCloud) {
-      NSError *error = nil;
-      [SFHFKeychainUtils storeUsername:obj
-                           andPassword:valueFromiCloud
-                        forServiceName:@"MKStoreKit"
-                        updateExisting:YES
-                                 error:&error];
-      if(error) NSLog(@"%@", error);
-    }
-  }];
-}
-
-+(BOOL) iCloudAvailable {
-  
-  if(NSClassFromString(@"NSUbiquitousKeyValueStore")) { // is iOS 5?
-    
-    if([NSUbiquitousKeyValueStore defaultStore]) {  // is iCloud enabled
-      
-      return YES;
-    }
-  }
-  
-  return NO;
-}
-
-+(void) setObject:(id) object forKey:(NSString*) key
++(void) updateFromiCloud:(NSNotification*) notificationObject
 {
-  if(object) {
-    NSString *objectString = nil;
-    if([object isKindOfClass:[NSData class]])
-    {
-      objectString = [[NSString alloc] initWithData:object encoding:NSUTF8StringEncoding];
-    }
-    if([object isKindOfClass:[NSNumber class]])
-    {
-      objectString = [(NSNumber*)object stringValue];
+    NSLog(@"Updating from iCloud");
+    NSUbiquitousKeyValueStore *iCloudStore = [NSUbiquitousKeyValueStore defaultStore];
+    NSDictionary *dict = [iCloudStore dictionaryRepresentation];
+    NSMutableArray *products = [self allProducts];
+    
+    [products enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
+        
+        id valueFromiCloud = [dict objectForKey:obj];
+        
+        if(valueFromiCloud) {
+            NSError *error = nil;
+            [SFHFKeychainUtils storeUsername:obj
+                                 andPassword:valueFromiCloud
+                              forServiceName:@"MKStoreKit"
+                              updateExisting:YES
+                                       error:&error];
+            if(error) NSLog(@"%@", error);
+        }
+    }];
+}
+
++ (BOOL)iCloudAvailable
+{
+    // Disable iCloud. We don't want it now.
+    if (YES) {
+        return NO;
     }
     
-    NSError *error = nil;
-    [SFHFKeychainUtils storeUsername:key andPassword:objectString forServiceName:@"MKStoreKit" updateExisting:YES error:&error];
-    if(error) NSLog(@"%@", error);
-    
-    if([self iCloudAvailable]) {
-      [[NSUbiquitousKeyValueStore defaultStore] setObject:objectString forKey:key];
-      [[NSUbiquitousKeyValueStore defaultStore] synchronize];
+    if(NSClassFromString(@"NSUbiquitousKeyValueStore")) { // is iOS 5?
+        
+        if([NSUbiquitousKeyValueStore defaultStore]) {  // is iCloud enabled
+            
+            return YES;
+        }
     }
-  } else {
     
-    NSError *error = nil;
-    [SFHFKeychainUtils deleteItemForUsername:key andServiceName:@"MKStoreKit" error:&error];
-    if(error) NSLog(@"%@", error);
-    
-    if([self iCloudAvailable]) {
-      [[NSUbiquitousKeyValueStore defaultStore] removeObjectForKey:key];
-      [[NSUbiquitousKeyValueStore defaultStore] synchronize];
+    return NO;
+}
+
++ (void)setObject:(id)object forKey:(NSString*)key
+{
+    if(object) {
+        NSString *objectString = nil;
+        if([object isKindOfClass:[NSData class]])
+        {
+            NSData *objectData = object;
+            objectString = [objectData base64EncodedStringWithOptions:0];
+        }
+        if([object isKindOfClass:[NSNumber class]])
+        {
+            objectString = [(NSNumber*)object stringValue];
+        }
+        
+        NSError *error = nil;
+        [SFHFKeychainUtils storeUsername:key andPassword:objectString forServiceName:@"MKStoreKit" updateExisting:YES error:&error];
+        if(error) NSLog(@"%@", error);
+        
+        if([self iCloudAvailable]) {
+            [[NSUbiquitousKeyValueStore defaultStore] setObject:objectString forKey:key];
+            [[NSUbiquitousKeyValueStore defaultStore] synchronize];
+        }
+    } else {
+        
+        NSError *error = nil;
+        [SFHFKeychainUtils deleteItemForUsername:key andServiceName:@"MKStoreKit" error:&error];
+        if(error) NSLog(@"%@", error);
+        
+        if([self iCloudAvailable]) {
+            [[NSUbiquitousKeyValueStore defaultStore] removeObjectForKey:key];
+            [[NSUbiquitousKeyValueStore defaultStore] synchronize];
+        }
     }
-  }
 }
 
 +(id) receiptForKey:(NSString*) key {
@@ -164,10 +169,16 @@ static MKStoreManager* _sharedStoreManager;
   return [NSNumber numberWithInt:[[MKStoreManager objectForKey:key] intValue]];
 }
 
-+(NSData*) dataForKey:(NSString*) key
++ (NSData*)dataForKey:(NSString*)key
 {
-  NSString *str = [MKStoreManager objectForKey:key];
-  return [str dataUsingEncoding:NSUTF8StringEncoding];
+    NSString *str = [MKStoreManager objectForKey:key];
+    
+    NSData *decodedData = nil;
+    if (str) {
+        decodedData = [[NSData alloc] initWithBase64EncodedString:str options:0];
+    }
+    
+    return decodedData;
 }
 
 #pragma mark Singleton Methods
@@ -192,8 +203,6 @@ static MKStoreManager* _sharedStoreManager;
                                                selector:@selector(updateFromiCloud:)
                                                    name:NSUbiquitousKeyValueStoreDidChangeExternallyNotification
                                                  object:nil];
-    
-    
   }
   return _sharedStoreManager;
 }
@@ -273,6 +282,19 @@ static MKStoreManager* _sharedStoreManager;
     return [consumableNames allObjects];
 }
 
+- (void) removeAlliCloudData {
+    if ([MKStoreManager iCloudAvailable]) {
+        NSLog(@"Removing all keys from iCloud");
+        NSUbiquitousKeyValueStore *iCloudStore = [NSUbiquitousKeyValueStore defaultStore];
+        NSDictionary *dict = [iCloudStore dictionaryRepresentation];
+        
+        [[dict allKeys] enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
+            [[NSUbiquitousKeyValueStore defaultStore] removeObjectForKey:obj];
+            [[NSUbiquitousKeyValueStore defaultStore] synchronize];
+        }];
+    }
+}
+
 - (BOOL) removeAllKeychainData {
   
   NSMutableArray *productsArray = [MKStoreManager allProducts];
@@ -324,7 +346,8 @@ static MKStoreManager* _sharedStoreManager;
 // call this function to check if the user has already purchased your feature
 + (BOOL) isFeaturePurchased:(NSString*) featureId
 {
-  return [[MKStoreManager numberForKey:featureId] boolValue];
+    BOOL isFeaturePurchased = [[MKStoreManager numberForKey:featureId] boolValue];
+    return isFeaturePurchased;
 }
 
 - (BOOL) isSubscriptionActive:(NSString*) featureId
