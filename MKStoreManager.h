@@ -52,7 +52,7 @@
 @interface MKStoreManager : NSObject<SKProductsRequestDelegate, SKPaymentTransactionObserver>
 
 // These are the methods you will be using in your app
-+ (MKStoreManager*)sharedManager;
++ (instancetype)sharedManager;
 
 // this is a class method, since it doesn't require the store manager to be initialized prior to calling
 + (BOOL) isFeaturePurchased:(NSString*) featureId;

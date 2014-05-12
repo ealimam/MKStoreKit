@@ -183,7 +183,7 @@ static MKStoreManager* _sharedStoreManager;
 
 #pragma mark Singleton Methods
 
-+ (MKStoreManager*)sharedManager
++ (instancetype)sharedManager
 {
 	if(!_sharedStoreManager) {
 		static dispatch_once_t oncePredicate;
