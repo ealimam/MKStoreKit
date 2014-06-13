@@ -579,52 +579,58 @@ static MKStoreManager* _sharedStoreManager;
 
 #ifdef __IPHONE_6_0
 -(void) hostedContentDownloadStatusChanged:(NSArray*) hostedContents {
-  
-  __block SKDownload *thisHostedContent = nil;
-  
-  NSMutableArray *itemsToBeRemoved = [NSMutableArray array];
-  [hostedContents enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
     
-    thisHostedContent = obj;
+    __block SKDownload *thisHostedContent = nil;
     
-    [self.hostedContents enumerateObjectsUsingBlock:^(id obj1, NSUInteger idx1, BOOL *stop1) {
-      
-      SKDownload *download = obj1;
-      if([download.contentIdentifier isEqualToString:thisHostedContent.contentIdentifier]) {
-        [itemsToBeRemoved addObject:obj1];
-      }
+    NSMutableArray *itemsToBeRemoved = [NSMutableArray array];
+    [hostedContents enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
+        
+        thisHostedContent = obj;
+        
+        [self.hostedContents enumerateObjectsUsingBlock:^(id obj1, NSUInteger idx1, BOOL *stop1) {
+            
+            SKDownload *download = obj1;
+            if([download.contentIdentifier isEqualToString:thisHostedContent.contentIdentifier]) {
+                [itemsToBeRemoved addObject:obj1];
+            }
+        }];
     }];
-  }];
-  
-  [self.hostedContents removeObjectsInArray:itemsToBeRemoved];
-  [self.hostedContents addObjectsFromArray:hostedContents];
-  
-  if(self.hostedContentDownloadStatusChangedHandler)
-    self.hostedContentDownloadStatusChangedHandler(self.hostedContents);
-  
-  // Finish any completed downloads
-  [hostedContents enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
-    SKDownload *download = obj;
     
-    switch (download.downloadState) {
-      case SKDownloadStateFinished:
+    [self.hostedContents removeObjectsInArray:itemsToBeRemoved];
+    [self.hostedContents addObjectsFromArray:hostedContents];
+    
+    if(self.hostedContentDownloadStatusChangedHandler)
+        self.hostedContentDownloadStatusChangedHandler(self.hostedContents);
+    
+    // Finish any completed downloads
+    [hostedContents enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
+        SKDownload *download = obj;
+        
+        switch (download.downloadState) {
+            case SKDownloadStateActive:
+            case SKDownloadStateWaiting:
+            case SKDownloadStatePaused:
+            case SKDownloadStateCancelled:
+            case SKDownloadStateFailed:
+                break;
+            case SKDownloadStateFinished:
 #ifndef NDEBUG
-        NSLog(@"Download finished: %@", [download description]);
+                NSLog(@"Download finished: %@", [download description]);
 #endif
-            NSData* receiptData = nil;
-
+                NSData* receiptData = nil;
+                
                 NSURL* receiptUrl = [[NSBundle mainBundle] appStoreReceiptURL];
                 if ([[NSFileManager defaultManager] fileExistsAtPath:[receiptUrl path]]) {
                     receiptData = [NSData dataWithContentsOfURL:receiptUrl];
                 }
-        [self provideContent:download.transaction.payment.productIdentifier
-                  forReceipt:receiptData
-               hostedContent:[NSArray arrayWithObject:download]];
-        
-        [[SKPaymentQueue defaultQueue] finishTransaction:download.transaction];
-        break;
-    }
-  }];
+                [self provideContent:download.transaction.payment.productIdentifier
+                          forReceipt:receiptData
+                       hostedContent:[NSArray arrayWithObject:download]];
+                
+                [[SKPaymentQueue defaultQueue] finishTransaction:download.transaction];
+                break;
+        }
+    }];
 }
 #endif
 
