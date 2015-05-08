@@ -96,10 +96,10 @@ static MKStoreManager* _sharedStoreManager;
 + (BOOL)iCloudAvailable
 {
     // Disable iCloud. We don't want it now.
-    if (YES) {
+    if (/* DISABLES CODE */ (YES)) {
         return NO;
     }
-    
+	
     if(NSClassFromString(@"NSUbiquitousKeyValueStore")) { // is iOS 5?
         
         if([NSUbiquitousKeyValueStore defaultStore]) {  // is iCloud enabled
