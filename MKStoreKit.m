@@ -240,15 +240,15 @@ static NSDictionary *errorDictionary;
 	
 	if (![SKPaymentQueue canMakePayments]) {
 #if TARGET_OS_IPHONE
-		[[[UIAlertView alloc] initWithTitle:NSLocalizedString(@"In App Purchasing Disabled", @"")
-									message:NSLocalizedString(@"Check your parental control settings and try again later", @"")
+		[[[UIAlertView alloc] initWithTitle:NSLocalizedStringFromTable(@"In App Purchasing Disabled", @"MKStoreKit", @"")
+									message:NSLocalizedStringFromTable(@"Check your parental control settings and try again later", @"MKStoreKit", @"")
 								   delegate:self
-						  cancelButtonTitle:NSLocalizedString(@"Okay", @"")
+						  cancelButtonTitle:NSLocalizedStringFromTable(@"Okay", @"MKStoreKit", @"")
 						  otherButtonTitles:nil] show];
 #elif TARGET_OS_MAC
 		NSAlert *alert = [[NSAlert alloc] init];
-		alert.messageText = NSLocalizedString(@"In App Purchasing Disabled", @"");
-		alert.informativeText = NSLocalizedString(@"Check your parental control settings and try again later", @"");
+		alert.messageText = NSLocalizedStringFromTable(@"In App Purchasing Disabled", @"MKStoreKit", @"");
+		alert.informativeText = NSLocalizedStringFromTable(@"Check your parental control settings and try again later", @"MKStoreKit", @"");
 		[alert runModal];
 #endif
 		return;
